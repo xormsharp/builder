@@ -11,8 +11,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/xormsharp/sqlfiddle"
 	"github.com/stretchr/testify/assert"
+	"github.com/xormsharp/sqlfiddle"
 )
 
 const placeholderConverterSQL = "SELECT a, b FROM table_a WHERE b_id=(SELECT id FROM table_b WHERE b=?) AND id=? AND c=? AND d=? AND e=? AND f=?"
@@ -206,4 +206,10 @@ func TestToSQLInDifferentDialects(t *testing.T) {
 	assert.NoError(t, err)
 	assert.EqualValues(t, "SELECT * FROM table1 WHERE a=? AND b<>?", sql)
 	assert.EqualValues(t, []interface{}{"1", "100"}, args)
+}
+
+func TestToSQLInjectionHarmlessDisposal(t *testing.T) {
+	sql, err := MySQL().Select("*").From("table1").Where(Cond(Eq{"name": "cat';truncate table table1;"})).ToBoundSQL()
+	assert.NoError(t, err)
+	assert.EqualValues(t, "SELECT * FROM table1 WHERE name='cat'';truncate table table1;'", sql)
 }
