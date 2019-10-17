@@ -610,7 +610,7 @@ func TestSubquery(t *testing.T) {
 	assert.EqualValues(t, []interface{}{"a", 23}, args)
 }
 
-// https://github.com/go-xorm/xorm/issues/820
+// https://github.com/xormsharp/xorm/issues/820
 func TestExprCond(t *testing.T) {
 	b := Select("id").From("table1").Where(expr{sql: "a=? OR b=?", args: []interface{}{1, 2}}).Where(Or(Eq{"c": 3}, Eq{"d": 4}))
 	sql, args, err := b.ToSQL()

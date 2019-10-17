@@ -11,7 +11,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/go-xorm/sqlfiddle"
+	"github.com/xormsharp/sqlfiddle"
 	"github.com/stretchr/testify/assert"
 )
 

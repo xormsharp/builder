@@ -1,6 +1,6 @@
 workspace:
   base: /go
-  path: src/github.com/go-xorm/builder
+  path: src/github.com/xormsharp/builder
 
 clone:
   git:
@@ -21,7 +21,7 @@ pipeline:
     commands:
       - go get -u github.com/golang/lint/golint
       - go get -u github.com/stretchr/testify/assert
-      - go get -u github.com/go-xorm/sqlfiddle
+      - go get -u github.com/xormsharp/sqlfiddle
       - golint ./...
       - go test -v -race -coverprofile=coverage.txt -covermode=atomic
     when:
