@@ -20,9 +20,39 @@ const placeholderConvertedSQL = "SELECT a, b FROM table_a WHERE b_id=(SELECT id 
 const placeholderBoundSQL = "SELECT a, b FROM table_a WHERE b_id=(SELECT id FROM table_b WHERE b=1) AND id=2.1 AND c='3' AND d=4 AND e='5' AND f=true"
 
 func TestPlaceholderConverter(t *testing.T) {
-	newSQL, err := ConvertPlaceholder(placeholderConverterSQL, "$")
-	assert.NoError(t, err)
-	assert.EqualValues(t, placeholderConvertedSQL, newSQL)
+	var convertCases = []struct {
+		before, after string
+		mark          string
+	}{
+		{
+			before: placeholderConverterSQL,
+			after:  placeholderConvertedSQL,
+			mark:   "$",
+		},
+		{
+			before: "SELECT a, b, 'a?b' FROM table_a WHERE id=?",
+			after:  "SELECT a, b, 'a?b' FROM table_a WHERE id=:1",
+			mark:   ":",
+		},
+		{
+			before: "SELECT a, b, 'a\\'?b' FROM table_a WHERE id=?",
+			after:  "SELECT a, b, 'a\\'?b' FROM table_a WHERE id=$1",
+			mark:   "$",
+		},
+		{
+			before: "SELECT a, b, 'a\\'b' FROM table_a WHERE id=?",
+			after:  "SELECT a, b, 'a\\'b' FROM table_a WHERE id=$1",
+			mark:   "$",
+		},
+	}
+
+	for _, kase := range convertCases {
+		t.Run(kase.before, func(t *testing.T) {
+			newSQL, err := ConvertPlaceholder(kase.before, kase.mark)
+			assert.NoError(t, err)
+			assert.EqualValues(t, kase.after, newSQL)
+		})
+	}
 }
 
 func BenchmarkPlaceholderConverter(b *testing.B) {
@@ -147,7 +177,6 @@ func TestReadPreparationSQLFromFile(t *testing.T) {
 	fmt.Println(sqlFromFile)
 }
 
-/*
 func TestNewFiddler(t *testing.T) {
 	sqlFromFile, err := readPreparationSQLFromFile("testdata/mysql_fiddle_data.sql")
 	assert.NoError(t, err)
@@ -167,7 +196,7 @@ func TestExecutableCheck(t *testing.T) {
 
 	err = f.executableCheck("SELECT * FROM table3")
 	assert.Error(t, err)
-}*/
+}
 
 func TestToSQLInDifferentDialects(t *testing.T) {
 	sql, args, err := Postgres().Select().From("table1").Where(Eq{"a": "1"}.And(Neq{"b": "100"})).ToSQL()
@@ -212,4 +241,13 @@ func TestToSQLInjectionHarmlessDisposal(t *testing.T) {
 	sql, err := MySQL().Select("*").From("table1").Where(Cond(Eq{"name": "cat';truncate table table1;"})).ToBoundSQL()
 	assert.NoError(t, err)
 	assert.EqualValues(t, "SELECT * FROM table1 WHERE name='cat'';truncate table table1;'", sql)
+
+	sql, err = MySQL().Update(Eq{`a`: 1, `b`: nil}).From(`table1`).ToBoundSQL()
+	assert.NoError(t, err)
+	assert.EqualValues(t, "UPDATE table1 SET a=1,b=null", sql)
+
+	sql, args, err := MySQL().Update(Eq{`a`: 1, `b`: nil}).From(`table1`).ToSQL()
+	assert.NoError(t, err)
+	assert.EqualValues(t, "UPDATE table1 SET a=?,b=null", sql)
+	assert.EqualValues(t, []interface{}{1}, args)
 }
